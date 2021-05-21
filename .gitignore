@@ -177,3 +177,6 @@ modules.xml
 
 # Sonarlint plugin
 .idea/sonarlint
+
+# Rei cache
+data/

@@ -24,8 +24,10 @@ func WriteDocumentsToFile(file string, collection *mongo.Collection) error {
 		}
 		results = append(results, val)
 	}
+
 	bytes, err := json.Marshal(results)
 	err = ioutil.WriteFile(file, bytes, 0644)
+
 	if err != nil {
 		logrus.Fatalf("Failed to write file %s: %v", file, err)
 	}

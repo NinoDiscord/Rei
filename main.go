@@ -44,17 +44,23 @@ func init() {
 		Short: "Starts the conversion process",
 		RunE: Execute,
 	}
+
+	logrus.Info(string(os.PathSeparator))
+	cwd, _ := os.Getwd()
 	flag := convertCmd.Flags()
 	flag.StringP("uri", "u", "", "The connection URI string")
-	flag.StringP("db", "d", "", "The database")
+	flag.StringP("db", "n", "", "The database")
 	flag.StringP("collections", "c", "", "List of collections to convert")
+	flag.StringP("directory", "d", cwd + string(os.PathSeparator) + "data", "A directory to place it in, it'll default to `$ROOT/data/<db>/<collection>.json`")
 	rootCmd.AddCommand(convertCmd)
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
+	cwd, _ := os.Getwd()
 	collections, _ := cmd.Flags().GetString("collections")
 	uri, _ := cmd.Flags().GetString("uri")
 	db, _ := cmd.Flags().GetString("db")
+	dir, _ := cmd.Flags().GetString("directory")
 
 	if len(collections) == 0 {
 		return errors.New("missing collections array")
@@ -74,6 +80,27 @@ func Execute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	base := cwd + string(os.PathSeparator) + "data"
+	if dir != "" {
+		base = dir
+	}
+	_, err = os.Stat(base)
+	if os.IsNotExist(err) {
+		logrus.Infof("Create %s/", base)
+		err := os.Mkdir(base, 0644)
+		if err != nil {
+			logrus.Fatalf("Failed to create data directory: %v", err)
+		}
+		_, err = os.Stat(base + string(os.PathSeparator) + db)
+		if os.IsNotExist(err) {
+			logrus.Infof("Create %s/%s", base, db)
+			err := os.Mkdir(base + string(os.PathSeparator) + db, 0644)
+			if err != nil {
+				logrus.Fatalf("Failed to create the directory data/%s: %v", db, err)
+			}
+		}
+	}
+
 	mongoDb := client.Database(db)
 	cols := strings.Split(collections, ",")
 	logrus.Info(collections, cols)
@@ -82,7 +109,7 @@ func Execute(cmd *cobra.Command, args []string) error {
 		fmt.Printf("[%d/%d | %s] Now retrieving documents...\n", i + 1, len(cols), c)
 
 		collection := mongoDb.Collection(c)
-		if err := writer.WriteDocumentsToFile(c + ".json", collection); err != nil {
+		if err := writer.WriteDocumentsToFile(base + string(os.PathSeparator) + db + string(os.PathSeparator) + c + ".json", collection); err != nil {
 			return err
 		}
 	}
