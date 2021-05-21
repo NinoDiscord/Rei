@@ -55,7 +55,7 @@ func init() {
 	rootCmd.AddCommand(convertCmd)
 }
 
-func Execute(cmd *cobra.Command, args []string) error {
+func Execute(cmd *cobra.Command, _ []string) error {
 	cwd, _ := os.Getwd()
 	collections, _ := cmd.Flags().GetString("collections")
 	uri, _ := cmd.Flags().GetString("uri")
