@@ -1,0 +1,10 @@
+module dev.floofy.nino/rei
+
+go 1.16
+
+require (
+	github.com/briandowns/spinner v1.12.0 // indirect
+	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/spf13/cobra v1.1.3 // indirect
+	go.mongodb.org/mongo-driver v1.5.2 // indirect
+)
