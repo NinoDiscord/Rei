@@ -1,9 +1,14 @@
 package main
 
 import (
+	"dev.floofy.nino/rei/pkg/connection"
+	"dev.floofy.nino/rei/pkg/writer"
 	"errors"
+	"fmt"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"os"
+	"strings"
 )
 
 var rootCmd = &cobra.Command{
@@ -22,6 +27,8 @@ func main() {
 }
 
 func init() {
+	logrus.SetFormatter(&logrus.TextFormatter{})
+	logrus.SetLevel(logrus.DebugLevel)
 	// Setup commands
 	rootCmd.AddCommand(&cobra.Command{
 		Use: "version",
@@ -37,16 +44,15 @@ func init() {
 		Short: "Starts the conversion process",
 		RunE: Execute,
 	}
-
-	convertCmd.Flags().StringP("uri", "u", "", "The connection URI string")
-	convertCmd.Flags().StringP("db", "d", "", "The database")
-	convertCmd.Flags().StringArrayP("collections", "c", []string{}, "List of collections to convert")
-
+	flag := convertCmd.Flags()
+	flag.StringP("uri", "u", "", "The connection URI string")
+	flag.StringP("db", "d", "", "The database")
+	flag.StringP("collections", "c", "", "List of collections to convert")
 	rootCmd.AddCommand(convertCmd)
 }
 
 func Execute(cmd *cobra.Command, args []string) error {
-	collections, _ := cmd.Flags().GetStringArray("collections")
+	collections, _ := cmd.Flags().GetString("collections")
 	uri, _ := cmd.Flags().GetString("uri")
 	db, _ := cmd.Flags().GetString("db")
 
@@ -63,5 +69,23 @@ func Execute(cmd *cobra.Command, args []string) error {
 	}
 
 	println("Using connection string:", uri, "with database", db, "...")
+
+	client, err := connection.CreateMongoClient(uri); if err != nil {
+		return err
+	}
+
+	mongoDb := client.Database(db)
+	cols := strings.Split(collections, ",")
+	logrus.Info(collections, cols)
+
+	for i, c := range cols {
+		fmt.Printf("[%d/%d | %s] Now retrieving documents...\n", i + 1, len(cols), c)
+
+		collection := mongoDb.Collection(c)
+		if err := writer.WriteDocumentsToFile(c + ".json", collection); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
